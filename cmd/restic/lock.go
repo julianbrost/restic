@@ -11,6 +11,8 @@ import (
 	"github.com/restic/restic/internal/errors"
 	"github.com/restic/restic/internal/repository"
 	"github.com/restic/restic/internal/restic"
+
+	"github.com/cenkalti/backoff"
 )
 
 var globalLocks struct {
@@ -34,7 +36,29 @@ func lockRepository(repo *repository.Repository, exclusive bool) (*restic.Lock, 
 		lockFn = restic.NewExclusiveLock
 	}
 
-	lock, err := lockFn(context.TODO(), repo)
+	var lock *restic.Lock
+	exponentialBackoff := backoff.NewExponentialBackOff()
+	if globalOptions.WaitLock > 0 {
+		exponentialBackoff.MaxElapsedTime = globalOptions.WaitLock
+	} else {
+		// backoff.RetryNotify will retry indefinitely if MaxElapsedTime is set to 0.
+		exponentialBackoff.MaxElapsedTime = -1 * time.Nanosecond
+	}
+	waitMessagePrinted := false
+	err := backoff.RetryNotify(func() error {
+		debug.Log("trying to lock repository")
+		var err error
+		lock, err = lockFn(context.TODO(), repo)
+		if !restic.IsAlreadyLocked(err) {
+			err = backoff.Permanent(err)
+		}
+		return err
+	}, exponentialBackoff, func(err error, duration time.Duration) {
+		if !waitMessagePrinted {
+			Verbosef("repo already locked, waiting up to %s for the lock\n", globalOptions.WaitLock)
+			waitMessagePrinted = true
+		}
+	})
 	if err != nil {
 		return nil, errors.Fatalf("unable to create lock in backend: %v", err)
 	}

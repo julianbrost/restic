@@ -58,6 +58,7 @@ Usage help is available:
       -r, --repo string              repository to backup to or restore from (default: $RESTIC_REPOSITORY)
           --tls-client-cert string   path to a file containing PEM encoded TLS client certificate and private key
       -v, --verbose n[=-1]           be verbose (specify --verbose multiple times or level n)
+          --wait-lock duration       wait if the repository is already locked, takes a value like 5m or 2h (default: don't wait)
 
     Use "restic [command] --help" for more information about a command.
 
@@ -109,6 +110,7 @@ command:
       -r, --repo string              repository to backup to or restore from (default: $RESTIC_REPOSITORY)
           --tls-client-cert string   path to a file containing PEM encoded TLS client certificate and private key
       -v, --verbose n[=-1]           be verbose (specify --verbose multiple times or level n)
+          --wait-lock duration       wait if the repository is already locked, takes a value like 5m or 2h (default: don't wait)
 
 Subcommand that support showing progress information such as ``backup``,
 ``check`` and ``prune`` will do so unless the quiet flag ``-q`` or
